@@ -1,0 +1,12 @@
+*{
+    margin: 0;
+    padding: 0;
+}
+#mainn {
+    display: flex;
+    justify-content: center;
+}
+#map {
+    height: 80vh;
+    width: 98%;
+}

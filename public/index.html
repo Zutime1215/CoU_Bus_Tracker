@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>BUS Tracker BY CRIS</title>
+    </head>
+    <body data-rsssl=1>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.2/dist/leaflet.css" integrity="sha256-sA+zWATbFveLLNqWO2gtiw3HL/lh1giY/Inf1BJ0z14=" crossorigin=""/>
+        <link rel="stylesheet" type="text/css" href="src/main.css">
+
+
+        <script src="https://unpkg.com/leaflet@1.9.2/dist/leaflet.js" integrity="sha256-o9N1jGDZrf5tS+Ft4gbIK7mYMipq9lqpVJ91xHSyKhg=" crossorigin=""></script>
+        <!-- <script src="src/main.js"></script> -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+        <main>
+            <div id="map"></div>
+            <button onclick="takemetomark()">FIND ME</button>
+        </main>
+
+        <script>
+            const accuracy = 40;
+            const default_zoom = 17;
+            $.ajaxSetup({ cache: false });
+            const map = L.map('map');
+            let marker, circle, zoomed;
+
+            // Customized Marker
+            var blkicon = L.icon({
+                iconUrl: './src/marker_black.png',
+                iconSize: [30, 34]
+            });
+            // Customized Marker
+
+            // Layers
+            var ggl_street = L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                maxZoom: 25,
+                subdomains:['mt0','mt1','mt2','mt3'],
+                attribution: '© <a href="#">CoU Robo ICT Society</a>'
+            });
+            var ggl_sate = L.tileLayer('http://{s}.google.com/vt?lyrs=s&x={x}&y={y}&z={z}',{
+                maxZoom: 20,
+                subdomains:['mt0','mt1','mt2','mt3'],
+                attribution: '© <a href="#">CoU Robo ICT Society</a>'
+            });
+            var worldImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© <a href="#">CoU Robo ICT Society</a>'
+            });
+            var baseMaps = {
+                "Google Streets": ggl_street,
+                "Google Satellite": ggl_sate,
+                "Esri_WorldImagery": worldImagery,
+            };
+            var layerControl = L.control.layers(baseMaps).addTo(map);
+            // Layers
+
+
+            // Zoom Disable
+            // map.touchZoom.disable();
+            // map.doubleClickZoom.disable();
+            // map.scrollWheelZoom.disable();
+            // map.boxZoom.disable();
+            // map.keyboard.disable();
+            // $(".leaflet-control-zoom").css("visibility", "hidden");
+            // Zoom Disable
+            
+            function takemetomark() {
+                $.get("./locations/1", function(data){
+                    // var data = JSON.parse(data);
+                    var lat = data.lat;
+                    var lng = data.lon;
+                    map.setView([lat, lng], default_zoom);
+                });
+            }
+
+            function init() {
+                map.setView([23.418664, 91.134246], default_zoom); 
+                ggl_street.addTo(map);
+                takemetomark();
+            }
+
+            function fmain() {
+                $.get("./locations/1", function(data){
+                    // var data = JSON.parse(data);
+                    var lat = data.lat;
+                    var lng = data.lon;
+
+                    if (marker) {
+                        map.removeLayer(marker);
+                        map.removeLayer(circle);
+                    }
+
+                    marker = L.marker([lat, lng], { icon: blkicon }).addTo(map);
+                    circle = L.circle([lat, lng], { radius: accuracy }).setStyle({ color: 'green' });
+                    circle.addTo(map);
+
+                    if (!zoomed) {
+                        // zoomed = map.fitBounds(circle.getBounds()); 
+                    }
+
+                    map.setView();
+                });
+            }
+
+            init();
+            setInterval(fmain, 1500);
+        </script>
+    </body>
+</html>
