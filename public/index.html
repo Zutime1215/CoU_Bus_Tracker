@@ -69,8 +69,8 @@
             function takemetomark() {
                 $.get("./locations/1", function(data){
                     // var data = JSON.parse(data);
-                    var lat = data.lat;
-                    var lng = data.lon;
+                    var lat = data[0].lat;
+                    var lng = data[0].lon;
                     map.setView([lat, lng], default_zoom);
                 });
             }
@@ -84,8 +84,8 @@
             function fmain() {
                 $.get("./locations/1", function(data){
                     // var data = JSON.parse(data);
-                    var lat = data.lat;
-                    var lng = data.lon;
+                    var lat = data[0].lat;
+                    var lng = data[0].lon;
 
                     if (marker) {
                         map.removeLayer(marker);

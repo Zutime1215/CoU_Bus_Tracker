@@ -1,90 +1,127 @@
 const express = require("express");
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
+const bodyParser = require("body-parser");
+const cors = require("cors");
+const { MongoClient } = require("mongodb");
 
 const app = express();
 app.use(cors());
-
-app.use(express.static('public'));
-// Configuring body parser middleware
-app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-const port = process.env.port || 8080;
+// MongoDB Configuration
+const mongoUrl = "mongodb://localhost:27017";
+let mongoClient;
 
-const not_found = {
-	'lat': -1,
-	'lon': -1
-};
+// Array to store allowed bus IDs
+const allowedBusIds = ["1", "2", "3"];
 
-let location_data = {
-	'1': {
-		'lat': 23.418516,
-		'lon': 91.134237,
-		'last_updated_at': 0
-	},
-	'2': {
-		'lat': 2,
-		'lon': 2,
-		'last_updated_at': 0
-	},
-	'3': {
-		'lat': 3,
-		'lon': 3,
-		'last_updated_at': 0
-	}
-};
+// Initialize MongoDB connection
+MongoClient.connect(mongoUrl)
+  .then(client => {
+    console.log("Connected to MongoDB");
+    mongoClient = client;
+  })
+  .catch(err => {
+    console.error("Failed to connect to MongoDB", err);
+    process.exit(1);
+  });
 
-app.get('/locations/:id', (req, res) => {
-	const { id } = req.params;
-  	res.json(location_data[id] || not_found);
+const port = process.env.PORT || 8080;
+
+// Route to append GPS data
+app.patch("/locations/:busId/:lat/:lon", async (req, res) => {
+  const { busId, lat, lon } = req.params;
+
+  if (!allowedBusIds.includes(busId)) {
+    res.status(403).send("Bus ID is not allowed.");
+    return;
+  }
+
+  if (!lat || !lon) {
+    res.status(400).send("Latitude and Longitude are required.");
+    return;
+  }
+
+  try {
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split("T")[0];
+
+    // Use the bus ID as the database name
+    const db = mongoClient.db(`bus_${busId}`);
+
+    // Use today's date as the collection name
+    const collection = db.collection(today);
+
+    // Prepare the data to be inserted
+    const gpsData = {
+      lat: parseFloat(lat),
+      lon: parseFloat(lon),
+      time: Date.now() // Epoch time of the data
+    };
+
+    // Insert the data into the collection
+    await collection.insertOne(gpsData);
+
+    res.status(201).send("Data appended successfully.");
+  } catch (err) {
+    console.error("Error appending GPS data", err);
+    res.status(500).send("Internal Server Error.");
+  }
 });
 
-app.patch('/locations/:id/:lat/:lon', (req, res) => {
-	const { id, lat, lon } = req.params;
+// Route to get all GPS data for a specific day
+app.get("/locations/:busId/:date", async (req, res) => {
+  const { busId, date } = req.params;
 
-	if (!location_data[id]) {
-		res.status(400).send('Invalid request id.');
-		return;
-	}
+  try {
+    // Use the bus ID as the database name
+    const db = mongoClient.db(`bus_${busId}`);
 
-	if (lat < 0 || lon < 0) {
-		res.status(400).send('Invalid lat or lon data.');
-		return;
-	}
+    // Use the provided date as the collection name
+    const collection = db.collection(date);
 
-	updated_location = {
-		'lat': lat,
-		'lon': lon,
-		'last_updated_at': Date.now()
-	}
+    // Fetch all records for the date
+    const data = await collection.find().toArray();
 
-	location_data[id] = updated_location;
-  	res.json(updated_location);
+    res.status(200).json(data);
+  } catch (err) {
+    console.error("Error fetching GPS data", err);
+    res.status(500).send("Internal Server Error.");
+  }
 });
 
-app.get('/locations', (req, res) => {
-  	res.json(location_data);
-});
+// Route to get the current location of a specific bus
+app.get("/locations/:busId/", async (req, res) => {
+  const { busId } = req.params;
 
-app.post('/locations/save', (req, res) => {
-	fs.writeFile(`./log/${Date.now()}.txt`, JSON.stringify(location_data), err => {
-		if (err) {
-			res.send('file written failed');}
-		else {
-	  		res.send('saved');  
-	  	}
-	});
+  if (!allowedBusIds.includes(busId)) {
+    res.status(403).send("Bus ID is not allowed.");
+    return;
+  }
+
+  try {
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split("T")[0];
+
+    // Use the bus ID as the database name
+    const db = mongoClient.db(`bus_${busId}`);
+
+    // Use today's date as the collection name
+    const collection = db.collection(today);
+
+    // Fetch the most recent record
+    const latestRecord = await collection.find().sort({ time: -1 }).limit(1).toArray();
+
+    if (latestRecord.length === 0) {
+      res.status(404).send("No location data available for today.");
+    } else {
+      res.status(200).json(latestRecord[0]);
+    }
+  } catch (err) {
+    console.error("Error fetching current location", err);
+    res.status(500).send("Internal Server Error.");
+  }
 });
 
 app.listen(port, () => {
-  	console.log(`Example app listening on port ${port}`);
+  console.log(`GPS Tracker API listening on port ${port}`);
 });
-
-/**
- * 
- * curl -X PATCH {base_url}/location/:id/:lat/:lon
- * 
- */
