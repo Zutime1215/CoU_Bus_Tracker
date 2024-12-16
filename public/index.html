@@ -67,10 +67,10 @@
             // Zoom Disable
             
             function takemetomark() {
-                $.get("./locations/1", function(data){
+                $.get("./locations/2", function(data){
                     // var data = JSON.parse(data);
-                    var lat = data[0].lat;
-                    var lng = data[0].lon;
+                    var lat = data.lat;
+                    var lng = data.lon;
                     map.setView([lat, lng], default_zoom);
                 });
             }
@@ -82,10 +82,10 @@
             }
 
             function fmain() {
-                $.get("./locations/1", function(data){
+                $.get("./locations/2", function(data){
                     // var data = JSON.parse(data);
-                    var lat = data[0].lat;
-                    var lng = data[0].lon;
+                    var lat = data.lat;
+                    var lng = data.lon;
 
                     if (marker) {
                         map.removeLayer(marker);
