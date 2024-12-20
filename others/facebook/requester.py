@@ -1,12 +1,15 @@
 import requests
-from time import sleep
+from time import sleep, time
 import string
 import random
 
-s = ''.join(random.choices(string.ascii_letters, k=20))
 i = 1
-while True:
+for i in range(1, 81):
+    x = ''.join(random.choices(string.ascii_letters, k=15))
+    s = f"Current Location: [{x}]\nUpdated at: {time()}"
+    
+
+    print(s)
     res = requests.get("http://localhost:8080/updatePost/"+s+str(i)).text
     print(res, i)
-    i+=1
-    sleep(120)
+    sleep(50)
